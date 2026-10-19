@@ -113,7 +113,7 @@ export function NoteTree({ w, selected, folder, search, onSearch, onSelect, onFo
             const isCollapsed = collapsedNotes.has(note.id);
             return <li key={note.id}>
                 <div className={'tree-row tree-note' + (selected === note.id ? ' selected' : '') + (dragId === note.id ? ' dragging' : '')} style={{ paddingLeft: 10 + rowDepth * 18, display: 'flex', alignItems: 'center' }}>
-                    {hasChildren && <button className="tree-toggle" style={{ padding: 0, marginRight: 4, height: 'auto' }} aria-expanded={!isCollapsed} onClick={(e) => { e.stopPropagation(); toggleNote(note.id); }} title={isCollapsed ? "Expand concepts" : "Collapse concepts"}>
+                    {hasChildren && <button type="button" className="tree-toggle" style={{ padding: 0, marginRight: 4, height: 'auto', zIndex: 10, position: 'relative' }} aria-expanded={!isCollapsed} onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleNote(note.id); }} title={isCollapsed ? "Expand concepts" : "Collapse concepts"}>
                         <ChevronRight size={14} className={!isCollapsed ? 'open' : ''} aria-hidden="true" />
                     </button>}
                     {!hasChildren && <span style={{ width: 14, marginRight: 4, display: 'inline-block' }}></span>}
