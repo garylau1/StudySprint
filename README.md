@@ -14,15 +14,15 @@
 
 StudySprint transforms active recall into an interactive monster-taming RPG battle system. Rather than reviewing static flashcards, your study notes and concepts spawn as encounters in the wild[cite: 7].
 
-* **Concepts as Creatures:** Every encounter draws directly from your active flashcard deck, manifesting study concepts as wild creatures (e.g., *Wild Evidence*)[cite: 7].
+* **Concepts as Creatures:** Every encounter draws directly from your active flashcard deck, manifesting study concepts as wild creatures (e.g., *Wild Evidence*).
 * **Type-to-Attack Mechanics:** 
-  * Deal damage to the creature's HP bar by recalling and typing the answer[cite: 7].
-  * Correct answers defeat the creature and add it to your permanent **Collection**[cite: 7, 8].
+  * Deal damage to the creature's HP bar by recalling and typing the answer.
+  * Correct answers defeat the creature and add it to your permanent **Collection**.
 * **High-Stakes Spaced Repetition:**
-  * **Adventurer Health (HP):** You start each run with a health pool[cite: 7].
-  * **Three-Strike Rule:** Three incorrect answers drop your Adventurer HP to zero, triggering party exhaustion and ending the battle[cite: 7, 8].
-  * **Spaced Repetition Integration:** Battle outcomes (wins, misses, and defeats) automatically adjust the card's review schedule in your spaced repetition queue[cite: 8].
-* **Progression System:** Gain experience points (XP) to level up your adventurer profile and track caught creatures in your compendium[cite: 7].
+  * **Adventurer Health (HP):** You start each run with a health pool.
+  * **Three-Strike Rule:** Three incorrect answers drop your Adventurer HP to zero, triggering party exhaustion and ending the battle.
+  * **Spaced Repetition Integration:** Battle outcomes (wins, misses, and defeats) automatically adjust the card's review schedule in your spaced repetition queue.
+* **Progression System:** Gain experience points (XP) to level up your adventurer profile and track caught creatures in your compendium.
 
 ---
 
