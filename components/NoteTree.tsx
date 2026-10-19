@@ -23,11 +23,11 @@ const ROOT = '\u0000root';
 
 // Per-browser view preferences.
 const KEY = 'studysprint-note-tree';
-function readPrefs(): { collapsed: string[]; sort: Sort } {
-    try { const v = JSON.parse(localStorage.getItem(KEY) || '{}'); return { collapsed: Array.isArray(v.collapsed) ? v.collapsed.filter((x: unknown) => typeof x === 'string') : [], sort: v.sort === 'updated' ? 'updated' : 'name' }; }
-    catch { return { collapsed: [], sort: 'name' }; }
+function readPrefs(): { collapsed: string[]; collapsedNotes: string[]; sort: Sort } {
+    try { const v = JSON.parse(localStorage.getItem(KEY) || '{}'); return { collapsed: Array.isArray(v.collapsed) ? v.collapsed.filter((x: unknown) => typeof x === 'string') : [], collapsedNotes: Array.isArray(v.collapsedNotes) ? v.collapsedNotes.filter((x: unknown) => typeof x === 'string') : [], sort: v.sort === 'updated' ? 'updated' : 'name' }; }
+    catch { return { collapsed: [], collapsedNotes: [], sort: 'name' }; }
 }
-function savePrefs(collapsed: Set<string>, sort: Sort) { try { localStorage.setItem(KEY, JSON.stringify({ collapsed: [...collapsed], sort })); } catch { /* view still works */ } }
+function savePrefs(collapsed: Set<string>, collapsedNotes: Set<string>, sort: Sort) { try { localStorage.setItem(KEY, JSON.stringify({ collapsed: [...collapsed], collapsedNotes: [...collapsedNotes], sort })); } catch { /* view still works */ } }
 
 const byName = (a: { name?: string; title?: string }, b: { name?: string; title?: string }) => (a.name ?? a.title ?? '').localeCompare(b.name ?? b.title ?? '', undefined, { numeric: true, sensitivity: 'base' });
 
@@ -35,15 +35,23 @@ const byName = (a: { name?: string; title?: string }, b: { name?: string; title?
 export function NoteTree({ w, selected, folder, search, onSearch, onSelect, onFolder, onNewNote, onNewFolder, onMove }: Props) {
     const [prefs] = useState(readPrefs);
     const [collapsed, setCollapsed] = useState(() => new Set(prefs.collapsed));
+    const [collapsedNotes, setCollapsedNotes] = useState(() => new Set(prefs.collapsedNotes));
     const [sort, setSort] = useState<Sort>(prefs.sort);
-    const update = (next: Set<string>, nextSort = sort) => { setCollapsed(next); setSort(nextSort); savePrefs(next, nextSort); };
+    const update = (next: Set<string>, nextNotes: Set<string> = collapsedNotes, nextSort = sort) => { setCollapsed(next); setCollapsedNotes(nextNotes); setSort(nextSort); savePrefs(next, nextNotes, nextSort); };
+    const updateNotes = (nextNotes: Set<string>) => update(collapsed, nextNotes, sort);
 
     // Opening a note from elsewhere (a link, the graph, a card) reveals its folder.
     const selectedSubject = w.notes.find(n => n.id === selected)?.subject ?? '';
     const [revealed, setRevealed] = useState(selected);
     if (revealed !== selected) {
         setRevealed(selected);
-        if (collapsed.has(selectedSubject)) { const next = new Set(collapsed); next.delete(selectedSubject); update(next); }
+        let updated = false;
+        const nextFolders = new Set(collapsed);
+        if (nextFolders.has(selectedSubject)) { nextFolders.delete(selectedSubject); updated = true; }
+        // We also want to reveal if it is a child concept note, but we'd need to find its parent.
+        // For simplicity, we just clear the note from collapsedNotes if we know its parent.
+        // It will be handled partly when parentByChild is computed, but we can't do it easily here.
+        if (updated) update(nextFolders);
     }
 
     const q = search.trim().toLowerCase();
@@ -54,6 +62,7 @@ export function NoteTree({ w, selected, folder, search, onSearch, onSelect, onFo
     const loose = order(w.notes.filter(n => (!n.subject || !known.has(n.subject)) && matches(n)));
     const allCollapsed = folders.length > 0 && folders.every(f => collapsed.has(f.id));
     const toggle = (id: string) => { const next = new Set(collapsed); if (next.has(id)) next.delete(id); else next.add(id); update(next); };
+    const toggleNote = (id: string) => { const next = new Set(collapsedNotes); if (next.has(id)) next.delete(id); else next.add(id); updateNotes(next); };
     // Drag and drop between folders.
     const [dragId, setDragId] = useState(''), [dropTarget, setDropTarget] = useState('');
     const openTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -98,12 +107,24 @@ export function NoteTree({ w, selected, folder, search, onSearch, onSelect, onFo
             parentByChild.set(note.id, parent.id);
             childrenByParent.set(parent.id, [...(childrenByParent.get(parent.id) || []), note]);
         }
-        const render = (note: Note, rowDepth: number): ReactNode => <li key={note.id}>
-            <button draggable onDragStart={e => { e.dataTransfer.setData('text/plain', note.title); e.dataTransfer.effectAllowed = 'move'; setDragId(note.id); }} onDragEnd={endDrag}
-                className={'tree-row tree-note' + (selected === note.id ? ' selected' : '') + (dragId === note.id ? ' dragging' : '')} style={{ paddingLeft: 10 + rowDepth * 18 }} aria-current={selected === note.id ? 'page' : undefined} onClick={() => onSelect(note)} title={note.title}>
-                <FileText size={14} aria-hidden="true"/><span>{note.title}</span></button>
-            {!!childrenByParent.get(note.id)?.length && <ul className="tree-concepts" aria-label={`Concepts from ${note.title}`}>{order(childrenByParent.get(note.id)!).map(child => render(child, rowDepth + 1))}</ul>}
-        </li>;
+        const render = (note: Note, rowDepth: number): ReactNode => {
+            const children = childrenByParent.get(note.id);
+            const hasChildren = !!children?.length;
+            const isCollapsed = collapsedNotes.has(note.id);
+            return <li key={note.id}>
+                <div className={'tree-row tree-note' + (selected === note.id ? ' selected' : '') + (dragId === note.id ? ' dragging' : '')} style={{ paddingLeft: 10 + rowDepth * 18, display: 'flex', alignItems: 'center' }}>
+                    {hasChildren && <button className="tree-toggle" style={{ padding: 0, marginRight: 4, height: 'auto' }} aria-expanded={!isCollapsed} onClick={(e) => { e.stopPropagation(); toggleNote(note.id); }} title={isCollapsed ? "Expand concepts" : "Collapse concepts"}>
+                        <ChevronRight size={14} className={!isCollapsed ? 'open' : ''} aria-hidden="true" />
+                    </button>}
+                    {!hasChildren && <span style={{ width: 14, marginRight: 4, display: 'inline-block' }}></span>}
+                    <button draggable onDragStart={e => { e.dataTransfer.setData('text/plain', note.title); e.dataTransfer.effectAllowed = 'move'; setDragId(note.id); }} onDragEnd={endDrag}
+                        className="tree-note-btn" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, textAlign: 'left', color: 'inherit', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }} aria-current={selected === note.id ? 'page' : undefined} onClick={() => onSelect(note)} title={note.title}>
+                        <FileText size={14} aria-hidden="true" style={{ flexShrink: 0 }} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{note.title}</span>
+                    </button>
+                </div>
+                {hasChildren && !isCollapsed && <ul className="tree-concepts" aria-label={`Concepts from ${note.title}`}>{order(children!).map(child => render(child, rowDepth + 1))}</ul>}
+            </li>;
+        };
         return ordered.filter(note => !parentByChild.has(note.id)).map(note => render(note, depth));
     };
 
@@ -111,8 +132,8 @@ export function NoteTree({ w, selected, folder, search, onSearch, onSelect, onFo
         <div className="tree-toolbar" role="toolbar" aria-label="Note tools">
             <button className="icon" onClick={() => onNewNote(folder === UNCATEGORISED ? '' : folder)} aria-label="New note" title="New note"><SquarePen size={16}/></button>
             <button className="icon" onClick={onNewFolder} aria-label="New folder" title="New folder"><FolderPlus size={16}/></button>
-            <button className="icon" onClick={() => update(collapsed, sort === 'name' ? 'updated' : 'name')} aria-label={sort === 'name' ? 'Sorted by name. Sort by last edited' : 'Sorted by last edited. Sort by name'} title={sort === 'name' ? 'Sorted A–Z' : 'Sorted by last edited'}>{sort === 'name' ? <ArrowDownAZ size={16}/> : <Clock size={16}/>}</button>
-            <button className="icon" disabled={!folders.length} onClick={() => update(allCollapsed ? new Set() : new Set(folders.map(f => f.id)))} aria-label={allCollapsed ? 'Expand all folders' : 'Collapse all folders'} title={allCollapsed ? 'Expand all' : 'Collapse all'}>{allCollapsed ? <ChevronsUpDown size={16}/> : <ChevronsDownUp size={16}/>}</button>
+            <button className="icon" onClick={() => update(collapsed, collapsedNotes, sort === 'name' ? 'updated' : 'name')} aria-label={sort === 'name' ? 'Sorted by name. Sort by last edited' : 'Sorted by last edited. Sort by name'} title={sort === 'name' ? 'Sorted A–Z' : 'Sorted by last edited'}>{sort === 'name' ? <ArrowDownAZ size={16}/> : <Clock size={16}/>}</button>
+            <button className="icon" disabled={!folders.length} onClick={() => update(allCollapsed ? new Set() : new Set(folders.map(f => f.id)), collapsedNotes, sort)} aria-label={allCollapsed ? 'Expand all folders' : 'Collapse all folders'} title={allCollapsed ? 'Expand all' : 'Collapse all'}>{allCollapsed ? <ChevronsUpDown size={16}/> : <ChevronsDownUp size={16}/>}</button>
         </div>
         <label className="search"><Search size={16}/><input aria-label="Search notes" placeholder="Find a note…" value={search} onChange={e => onSearch(e.target.value)}/></label>
         <ul className={'tree' + (dropTarget === ROOT ? ' drop-target' : '')} {...dropProps(ROOT)}>
