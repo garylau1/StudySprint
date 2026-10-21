@@ -12,9 +12,11 @@ Requires Node 22.13+, Python 3.14, Tesseract, and LibreOffice for document conve
 ### Key Features
 
 * **Gamified Active Recall (Adventure Mode):** Turns flashcard decks into monster-taming encounters where typing answers damages creature HP and three strikes end the battle[cite: 7, 8]. Results feed directly into the FSRS spaced repetition engine[cite: 8].
+* * **Semantic Concept Graphs:** Automatically extracts key ideas from lecture notes and clusters them into concentric similarity rings (High, Medium, Low) using text similarity. Allows interactive editing of links and supporting text before syncing concepts directly into a global, force-directed knowledge graph.
 * **Document Conversion & Annotations:** The Original reader supports highlights, underlines, comments, and freehand drawing with recoverable autosave, undo/redo, and flattened annotated-PDF downloads. Converted notes retain private image assets.
 * **Portable Backups:** v3 ZIP backups retain originals, PDF bases, images, annotations, and Markdown revision histories (v1 JSON and v2 ZIP restores remain supported).
 * **Local Dictation:** Live English speech recognition runs locally via WhisperLiveKit/MLX on Apple Silicon without third-party transcription APIs (see [JUDGES.md](JUDGES.md)).
+
 
 
 ### Document conversion and annotations
